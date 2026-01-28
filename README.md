@@ -1,80 +1,63 @@
 # Dolar BNA Divisa
 
-Script en Python 3.x para obtener diariamente la cotizacion del **Dolar U.S.A** en **Divisas** y **Billetes** desde la web publica del Banco Nacion Argentina (BNA) y guardar un historico.
+Script en Python 3.x para obtener diariamente la cotización del **Dólar U.S.A** en **Divisas** y **Billetes** desde la web pública del Banco Nación Argentina (BNA) y mantener un histórico.
 
-El valor clave para carga en Oracle es:
+El valor clave para la carga en Oracle es:
+
 - `segmento = "Divisa"` y `tipo = "Venta"`
 
 ## Objetivo
-- Descargar la pagina de BNA Personas.
-- Identificar la seccion **Cotizacion Divisas** y **Cotizacion Billetes**.
-- Extraer **Compra/Venta** de **Dolar U.S.A**.
-- Actualizar un historico idempotente (sin duplicar fecha/moneda/segmento/tipo).
-- Registrar cuando el valor no cambia respecto al ultimo registro.
 
-## Requisitos
-- Python 3.x
-- Paquetes: `requests`, `beautifulsoup4`, `pandas`
-- Fuente: https://www.bna.com.ar/Personas
+- Descargar la página de BNA Personas.
+- Identificar las secciones de **Cotización Divisas** y **Cotización Billetes**.
+- Extraer **Compra/Venta** de **Dólar U.S.A**.
+- Actualizar un histórico idempotente.
+- Asegurar la sincronización de archivos de legado para compatibilidad.
 
-## Instalacion
+## Archivos de Salida
+
+### 1) Histórico Maestro (`--out`)
+
+Es el archivo principal de seguimiento del script (por defecto `bna_divisa_hist.csv`). Se usa para detectar si los datos del día ya fueron procesados.
+Columnas: `fecha` (YYYY-MM-DD), `moneda`, `segmento`, `tipo`, `valor`.
+
+### 2) Archivos de Legado (Secundarios)
+
+Se actualizan automáticamente para mantener compatibilidad con sistemas externos:
+
+- `bna_dolar_divisa_hist.csv`: Formato específico de Divisas con separador `;`.
+- `bna_dolar_billete_hist.csv`: Formato específico de Billetes con separador `;`.
+
+## Instalación
+
 ```bash
 python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
 source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
 ## Uso
+
 ```bash
 python bna_divisa.py --out bna_divisa_hist.csv
 ```
 
-El parametro `--out` puede ser:
-- CSV: `bna_divisa_hist.csv` (default)
-- Excel: `bna_divisa_hist.xlsx`
-- SQLite: `bna_divisa_hist.sqlite` o `.db`
+## Mensajes de Salida
 
-## Salidas
-### 1) Historico principal
-Archivo indicado por `--out`, con columnas:
-- `fecha` (YYYY-MM-DD)
-- `moneda` (USD)
-- `segmento` (Divisa o Billete)
-- `tipo` (Compra o Venta)
-- `valor` (float)
+El script informa su estado de forma concisa:
 
-**Valor a cargar en Oracle:**
-- `segmento = "Divisa"` y `tipo = "Venta"`
+- `ya existian valores para la fecha dd/mm/aaaa, Actualizado`: Los datos ya están en el maestro, pero se verificó/corrigió la integridad de los archivos de legado.
+- `se agregaron USD aaaa-mm-dd: ...`: Se detectaron y guardaron nuevos registros.
+- `Advertencia: No se encontraron cotizaciones...`: Problema al extraer datos de la web (cambio de HTML o caída del sitio).
 
-### 2) CSVs secundarios (legado)
-El script tambien actualiza:
-- `bna_dolar_divisa_hist.csv`
-- `bna_dolar_billete_hist.csv`
+## Automatización (Windows)
 
-## Formato decimal y separadores
-- En el historico principal (`--out`), `valor` es **float**.
-- En los CSVs secundarios, se usa `;` como separador y `,` como decimal.
-
-## Idempotencia
-- Si ya existen los 4 registros (Divisa/Billete, Compra/Venta) para la fecha, no se duplican.
-
-## Logs esperados
-- Mensajes de no-actualizacion si el valor coincide con el ultimo registro.
-- Advertencia si la fecha de Divisa y Billete no coincide.
-
-## Automatizacion (Linux)
-Ejemplo cron (17:00 GMT-3):
-```bash
-0 17 * * * /ruta/python /ruta/proyecto/bna_divisa.py --out /ruta/proyecto/bna_divisa_hist.csv >> /ruta/proyecto/bna_divisa.log 2>&1
-```
-
-## Automatizacion (Windows)
-Usar Task Scheduler para ejecutar el mismo comando con Python.
-
-## Nota sobre Oracle
-La insercion en Oracle la realiza IT. Este script deja el valor identificado para su carga.
+Se recomienda el uso de **Task Scheduler** (Programador de Tareas) para ejecutar el script diariamente por la tarde (ej. 16:00 hs), cuando el BNA ya suele haber actualizado los cierres.
 
 ## Soporte
-Ante cambios en el HTML de BNA, revisar las funciones:
-- `extract_section_block`
-- `extract_usd_compra_venta`
+
+Ante cambios estructurales en la web del BNA, contactar a soporte o revisar las funciones de extracción en `bna_divisa.py`.

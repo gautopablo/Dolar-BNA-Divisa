@@ -1,5 +1,0 @@
-Plan
-1) Obtener HTML de BNA Personas y localizar sección "Cotización Divisas".
-2) Extraer "Dolar U.S.A" y el valor "Venta" (Divisas).
-3) Persistir en histórico idempotente (CSV por defecto) y loguear resultados.
-4) Preparar ejecución diaria (Task Scheduler/cron).
