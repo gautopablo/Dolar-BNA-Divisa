@@ -151,14 +151,13 @@ def fill_gaps(df: pd.DataFrame) -> pd.DataFrame:
     df["fecha"] = pd.to_datetime(df["fecha"])
     df = df.sort_values(["fecha", "moneda", "segmento", "tipo"])
 
-    # El rango debe ser desde la mínima hasta HOY-1
+    # El rango debe ser desde la mínima hasta HOY-1 para evitar valores inciertos.
     hoy = dt.date.today()
     ayer = hoy - dt.timedelta(days=1)
     
-    # Si la fecha máxima del DF es menor a ayer, rellenamos hasta ayer.
-    # Si es igual o mayor (por que el script ya extrajo hoy), dejamos el rango hasta el max del DF.
-    # Pero siguiendo tu pedido, el "relleno" forzado de huecos es hasta ayer.
-    fecha_final = max(df["fecha"].max().date(), ayer)
+    # La fecha final del relleno nunca debe superar a ayer.
+    # Si el DF tiene datos más viejos, rellena hasta ayer.
+    fecha_final = min(df["fecha"].max().date(), ayer)
 
     rango_fechas = pd.date_range(
         start=df["fecha"].min(), end=fecha_final, freq="D"
