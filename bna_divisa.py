@@ -141,6 +141,44 @@ def save_data(df: pd.DataFrame, path: Path) -> None:
     df.to_csv(path, index=False)
 
 
+def fill_gaps(df: pd.DataFrame) -> pd.DataFrame:
+    """Rellena huecos de fechas usando el valor anterior (forward fill)."""
+    if df.empty:
+        return df
+
+    # Asegurar tipos y ordenar
+    df = df.copy()
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    df = df.sort_values(["fecha", "moneda", "segmento", "tipo"])
+
+    # Crear un rango completo de fechas desde la minima a la maxima
+    rango_fechas = pd.date_range(
+        start=df["fecha"].min(), end=df["fecha"].max(), freq="D"
+    )
+
+    # Crear todas las combinaciones posibles de [fecha, moneda, segmento, tipo]
+    monedas = df["moneda"].unique()
+    segmentos = df["segmento"].unique()
+    tipos = df["tipo"].unique()
+
+    idx = pd.MultiIndex.from_product(
+        [rango_fechas, monedas, segmentos, tipos],
+        names=["fecha", "moneda", "segmento", "tipo"],
+    )
+
+    # Reindexar y aplicar forward fill por grupo
+    df_lleno = df.set_index(["fecha", "moneda", "segmento", "tipo"]).reindex(idx)
+    df_lleno = (
+        df_lleno.groupby(["moneda", "segmento", "tipo"], group_keys=False)
+        .ffill()
+        .reset_index()
+    )
+
+    # Volver a formato de fecha string ISO para guardado
+    df_lleno["fecha"] = df_lleno["fecha"].dt.strftime("%Y-%m-%d")
+    return df_lleno
+
+
 def format_decimal(
     value: float,
     max_decimals: int = 4,
@@ -335,44 +373,32 @@ def main() -> int:
         df = load_existing(out_path)
         if "segmento" not in df.columns:
             df["segmento"] = ""
-        if not df.empty:
-            df["fecha"] = df["fecha"].astype(str)
-            exists_all = True
-            for row in rows:
-                mask = (
-                    (df["fecha"] == row["fecha"])
-                    & (df["moneda"] == row["moneda"])
-                    & (df["segmento"] == row["segmento"])
-                    & (df["tipo"] == row["tipo"])
-                )
-                if not mask.any():
-                    exists_all = False
-                    break
-
-            if exists_all:
-                divisa_path = out_path.parent / DIVISA_OUT
-                billete_path = out_path.parent / BILLETE_OUT
-                update_divisa_file(divisa_path, rows)
-                update_billete_file(billete_path, rows)
-
-                # Formatear fecha para el mensaje final (usando la de divisa como referencia)
-                d_obj = dt.date.fromisoformat(fecha_div)
-                f_fmt = f"{d_obj.day:02d}/{d_obj.month:02d}/{d_obj.year}"
-                print(f"ya existian valores para la fecha {f_fmt}, Actualizado")
-                return 0
-
+        
         df_new = pd.DataFrame(rows)
         if df.empty:
             df = df_new
         else:
-            df = pd.concat([df, df_new], ignore_index=True)
+            df["fecha"] = df["fecha"].astype(str)
+            # Combinar y quitar duplicados exactos antes de rellenar
+            df = pd.concat([df, df_new]).drop_duplicates(
+                subset=["fecha", "moneda", "segmento", "tipo"], keep="last"
+            )
+
+        # Aplicar relleno de huecos (Sábados, Domingos, Feriados)
+        df = fill_gaps(df)
+        
         save_data(df, out_path)
+        
+        # Actualizar archivos legados usando el historial completo (para incluir los rellenos)
         divisa_path = out_path.parent / DIVISA_OUT
         billete_path = out_path.parent / BILLETE_OUT
-        update_divisa_file(divisa_path, rows)
-        update_billete_file(billete_path, rows)
+        all_rows = df.to_dict("records")
+        update_divisa_file(divisa_path, all_rows)
+        update_billete_file(billete_path, all_rows)
+
         print(
-            f"se agregaron USD {fecha_div}: Divisa ({compra_div}/{venta_div}), Billete ({compra_bil}/{venta_bil})"
+            f"Proceso completado. Se sincronizaron cotizaciones hasta {fecha_div}. "
+            f"Los huecos de fechas sin cotización oficial fueron rellenados con el valor anterior."
         )
         return 0
 
