@@ -2,8 +2,8 @@ name: Scrape BNA Cotizaciones
 
 on:
   schedule:
-    # Corre de Lunes a Viernes a las 14:00 UTC (11:00 AM hora Argentina aprox)
-    - cron: "0 14 * * 1-5"
+    # Corre todos los dias a las 08:00 UTC (05:00 AM hora Argentina)
+    - cron: "0 8 * * *"
   workflow_dispatch: # Permite correrlo manualmente desde el botón "Run workflow" en GitHub
 
 jobs:
