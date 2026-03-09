@@ -398,7 +398,7 @@ def main() -> int:
         # FILTRO CRÍTICO: Eliminar el día de HOY para evitar valores inciertos
         # Solo guardamos el historial hasta HOY-1
         hoy_str = dt.date.today().isoformat()
-        df = df[df["fecha"] < hoy_str]
+        df = df[df["fecha"] < hoy_str].sort_values("fecha")
         
         save_data(df, out_path)
         
