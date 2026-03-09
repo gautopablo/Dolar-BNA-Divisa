@@ -395,9 +395,14 @@ def main() -> int:
         # Aplicar relleno de huecos (Sábados, Domingos, Feriados)
         df = fill_gaps(df)
         
+        # FILTRO CRÍTICO: Eliminar el día de HOY para evitar valores inciertos
+        # Solo guardamos el historial hasta HOY-1
+        hoy_str = dt.date.today().isoformat()
+        df = df[df["fecha"] < hoy_str]
+        
         save_data(df, out_path)
         
-        # Actualizar archivos legados usando el historial completo (para incluir los rellenos)
+        # Actualizar archivos legados usando el historial completo (filtrado hasta ayer)
         divisa_path = out_path.parent / DIVISA_OUT
         billete_path = out_path.parent / BILLETE_OUT
         all_rows = df.to_dict("records")
