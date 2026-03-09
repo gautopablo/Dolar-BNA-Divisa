@@ -142,7 +142,7 @@ def save_data(df: pd.DataFrame, path: Path) -> None:
 
 
 def fill_gaps(df: pd.DataFrame) -> pd.DataFrame:
-    """Rellena huecos de fechas usando el valor anterior (forward fill)."""
+    """Rellena huecos de fechas usando el valor anterior hasta HOY-1."""
     if df.empty:
         return df
 
@@ -151,12 +151,20 @@ def fill_gaps(df: pd.DataFrame) -> pd.DataFrame:
     df["fecha"] = pd.to_datetime(df["fecha"])
     df = df.sort_values(["fecha", "moneda", "segmento", "tipo"])
 
-    # Crear un rango completo de fechas desde la minima a la maxima
+    # El rango debe ser desde la mínima hasta HOY-1
+    hoy = dt.date.today()
+    ayer = hoy - dt.timedelta(days=1)
+    
+    # Si la fecha máxima del DF es menor a ayer, rellenamos hasta ayer.
+    # Si es igual o mayor (por que el script ya extrajo hoy), dejamos el rango hasta el max del DF.
+    # Pero siguiendo tu pedido, el "relleno" forzado de huecos es hasta ayer.
+    fecha_final = max(df["fecha"].max().date(), ayer)
+
     rango_fechas = pd.date_range(
-        start=df["fecha"].min(), end=df["fecha"].max(), freq="D"
+        start=df["fecha"].min(), end=fecha_final, freq="D"
     )
 
-    # Crear todas las combinaciones posibles de [fecha, moneda, segmento, tipo]
+    # Crear todas las combinaciones posibles
     monedas = df["moneda"].unique()
     segmentos = df["segmento"].unique()
     tipos = df["tipo"].unique()
