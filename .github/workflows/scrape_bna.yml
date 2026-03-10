@@ -51,10 +51,17 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Agregar todos los cambios de archivos rastreados
+          git add -u
+
+          # Si hay archivos nuevos (como .sqlite o .xlsx que no existian), agregarlos tambien
           git add *.csv *.xlsx *.sqlite *.db 2>/dev/null || true
+
           if git diff --staged --quiet; then
-            echo "No hay cambios para commitear"
+            echo "No hay cambios detectados para subir de vuelta al repositorio."
           else
+            echo "Cambios detectados. Procediendo con el commit..."
             git commit -m "Auto-update: BNA Cotizaciones $(date +'%Y-%m-%d')"
             git push
           fi
