@@ -27,6 +27,26 @@ jobs:
       - name: Run scrape script
         run: python bna_divisa.py
 
+      - name: Debug - Mostrar fecha y ultimas lineas CSV
+        run: |
+          echo "=== FECHA/HORA DEL SERVIDOR ==="
+          date
+          echo ""
+          echo "=== Ultimas 5 lineas de bna_dolar_divisa_hist.csv ==="
+          tail -5 bna_dolar_divisa_hist.csv || echo "Archivo no encontrado"
+          echo ""
+          echo "=== Ultimas 5 lineas de bna_divisa_hist.csv ==="
+          tail -5 bna_divisa_hist.csv || echo "Archivo no encontrado"
+          echo ""
+          echo "=== Ultimas 5 lineas de bna_dolar_billete_hist.csv ==="
+          tail -5 bna_dolar_billete_hist.csv || echo "Archivo no encontrado"
+          echo ""
+          echo "=== Git status ==="
+          git status
+          echo ""
+          echo "=== Git diff (resumen) ==="
+          git diff --stat
+
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
