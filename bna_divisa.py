@@ -155,9 +155,9 @@ def fill_gaps(df: pd.DataFrame) -> pd.DataFrame:
     hoy = dt.date.today()
     ayer = hoy - dt.timedelta(days=1)
     
-    # La fecha final del relleno nunca debe superar a ayer.
-    # Si el DF tiene datos más viejos, rellena hasta ayer.
-    fecha_final = min(df["fecha"].max().date(), ayer)
+    # La fecha final del relleno siempre debe ser ayer para asegurar que
+    # se completen los huecos (fines de semana/feriados) ni bien cambia el día.
+    fecha_final = ayer
 
     rango_fechas = pd.date_range(
         start=df["fecha"].min(), end=fecha_final, freq="D"
